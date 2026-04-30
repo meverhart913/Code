@@ -1,0 +1,189 @@
+Option Explicit
+
+Sub BuildOptimizedPuckLayout()
+
+    Dim ws As Worksheet
+    Dim targetRange As Range
+    Dim clearRange As Range
+    Dim shp As Shape
+    Dim cell As Range
+
+    Dim partW As Double
+    Dim partH As Double
+    Dim puckD As Double
+
+    Dim m As Long
+    Dim n As Long
+
+    Dim scalePts As Double
+    Dim rowHt As Double
+    Dim colW As Double
+
+    Dim rx As Double
+    Dim ry As Double
+
+    Dim bestCX As Double
+    Dim bestCY As Double
+    Dim testCX As Double
+    Dim testCY As Double
+
+    Dim bestCount As Long
+    Dim testCount As Long
+    Dim stepSize As Double
+    Dim counter As Long
+
+    Set ws = ActiveSheet
+
+    'Inputs:
+    'H4 = part width in mm
+    'H5 = part height in mm
+    'H6 = puck diameter in mm
+    partW = ws.Range("H4").Value
+    partH = ws.Range("H5").Value
+    puckD = ws.Range("H6").Value
+
+    If partW <= 0 Or partH <= 0 Or puckD <= 0 Then
+        MsgBox "H4, H5, and H6 must all be greater than zero.", vbExclamation
+        Exit Sub
+    End If
+
+    'Calculate grid size large enough to cover puck
+    m = WorksheetFunction.Ceiling(puckD / partW, 1) + 2
+    n = WorksheetFunction.Ceiling(puckD / partH, 1) + 2
+
+    'Clear everything from K3 right and down
+    Set clearRange = ws.Range("K3", ws.Cells(ws.Rows.Count, ws.Columns.Count))
+    clearRange.Clear
+
+    'Delete old oval
+    On Error Resume Next
+    ws.Shapes("RangeCircle").Delete
+    On Error GoTo 0
+
+    'Create grid area
+    Set targetRange = ws.Range("K3").Resize(n, m)
+
+    'Scale factor: Excel points per mm
+    scalePts = 8
+
+    'Set cell height from part height
+    rowHt = partH * scalePts
+    targetRange.RowHeight = rowHt
+
+    'Set cell width from part width
+    colW = targetRange.Columns(1).ColumnWidth * _
+           ((partW * scalePts) / targetRange.Columns(1).Width)
+
+    targetRange.Columns.ColumnWidth = colW
+
+    'Refresh range after sizing
+    Set targetRange = ws.Range("K3").Resize(n, m)
+
+    'Fixed oval size based on puck diameter
+    rx = (puckD * scalePts) / 2
+    ry = (puckD * scalePts) / 2
+
+    'Create oval
+    Set shp = ws.Shapes.AddShape( _
+        Type:=msoShapeOval, _
+        Left:=targetRange.Left, _
+        Top:=targetRange.Top, _
+        Width:=puckD * scalePts, _
+        Height:=puckD * scalePts)
+
+    With shp
+        .Name = "RangeCircle"
+        .Fill.Visible = msoFalse
+        .Line.Visible = msoTrue
+        .Line.ForeColor.RGB = RGB(0, 0, 0)
+        .Line.Weight = 3
+    End With
+
+    'Optimize oval position
+    stepSize = 2
+
+    bestCount = -1
+
+    For testCX = targetRange.Left To targetRange.Left + targetRange.Width Step stepSize
+        For testCY = targetRange.Top To targetRange.Top + targetRange.Height Step stepSize
+
+            testCount = 0
+
+            For Each cell In targetRange.Cells
+                If CellFullyInsideOval(cell, testCX, testCY, rx, ry) Then
+                    testCount = testCount + 1
+                End If
+            Next cell
+
+            If testCount > bestCount Then
+                bestCount = testCount
+                bestCX = testCX
+                bestCY = testCY
+            End If
+
+        Next testCY
+    Next testCX
+
+    'Move oval to optimized position
+    shp.Left = bestCX - rx
+    shp.Top = bestCY - ry
+
+    'Apply borders and number valid cells
+    counter = 1
+
+    For Each cell In targetRange.Cells
+
+        cell.ClearContents
+        cell.Borders.LineStyle = xlNone
+
+        If CellFullyInsideOval(cell, bestCX, bestCY, rx, ry) Then
+
+            With cell.Borders
+                .LineStyle = xlContinuous
+                .Color = RGB(255, 0, 0)
+                .Weight = xlThick
+            End With
+
+            cell.Value = counter
+            cell.HorizontalAlignment = xlCenter
+            cell.VerticalAlignment = xlCenter
+
+            counter = counter + 1
+
+        End If
+
+    Next cell
+
+    'Outputs
+    ws.Range("H10").Value = n          'calculated rows
+    ws.Range("H11").Value = m          'calculated columns
+    ws.Range("H12").Value = bestCount  'usable parts
+
+End Sub
+
+
+Function CellFullyInsideOval(cell As Range, _
+                             cx As Double, cy As Double, _
+                             rx As Double, ry As Double) As Boolean
+
+    CellFullyInsideOval = _
+        PointInsideOval(cell.Left, cell.Top, cx, cy, rx, ry) And _
+        PointInsideOval(cell.Left + cell.Width, cell.Top, cx, cy, rx, ry) And _
+        PointInsideOval(cell.Left, cell.Top + cell.Height, cx, cy, rx, ry) And _
+        PointInsideOval(cell.Left + cell.Width, cell.Top + cell.Height, cx, cy, rx, ry)
+
+End Function
+
+
+Function PointInsideOval(x As Double, y As Double, _
+                         cx As Double, cy As Double, _
+                         rx As Double, ry As Double) As Boolean
+
+    Dim v As Double
+
+    v = (((x - cx) * (x - cx)) / (rx * rx)) + _
+        (((y - cy) * (y - cy)) / (ry * ry))
+
+    PointInsideOval = v <= 1
+
+End Function
