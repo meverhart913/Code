@@ -1,0 +1,239 @@
+Option Explicit
+
+Sub BuildOptimizedPuckLayout()
+
+    Dim ws As Worksheet
+    Dim targetRange As Range
+    Dim outputRange As Range
+    Dim shp As Shape
+    Dim cell As Range
+
+    Dim partW As Double
+    Dim partH As Double
+    Dim puckD As Double
+
+    Dim m As Long
+    Dim n As Long
+
+    Dim scalePts As Double
+    Dim rowHt As Double
+    Dim colW As Double
+
+    Dim rx As Double
+    Dim ry As Double
+
+    Dim bestCX As Double
+    Dim bestCY As Double
+    Dim testCX As Double
+    Dim testCY As Double
+
+    Dim bestCount As Long
+    Dim testCount As Long
+    Dim counter As Long
+
+    Dim baseLeft As Double
+    Dim baseTop As Double
+    Dim puckWidthPts As Double
+    Dim puckHeightPts As Double
+
+    Dim oldCalc As XlCalculation
+
+    On Error GoTo CleanFail
+
+    Set ws = ActiveSheet
+
+    'Speed controls
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    oldCalc = Application.Calculation
+    Application.Calculation = xlCalculationManual
+    Application.DisplayStatusBar = True
+    Application.StatusBar = "Building puck layout..."
+
+    'Inputs:
+    'H4 = part width in mm
+    'H5 = part height in mm
+    'H6 = puck diameter in mm
+    partW = ws.Range("H4").Value
+    partH = ws.Range("H5").Value
+    puckD = ws.Range("H6").Value
+
+    If partW <= 0 Or partH <= 0 Or puckD <= 0 Then
+        MsgBox "H4, H5, and H6 must all be greater than zero.", vbExclamation
+        GoTo CleanExit
+    End If
+
+    'Calculate grid size large enough to cover puck
+    m = WorksheetFunction.Ceiling(puckD / partW, 1) + 2
+    n = WorksheetFunction.Ceiling(puckD / partH, 1) + 2
+
+    Set targetRange = ws.Range("K3").Resize(n, m)
+
+    'Only clear the expected output area, not the entire sheet
+    Set outputRange = ws.Range("K3").Resize(n + 5, m + 5)
+    outputRange.Clear
+
+    'Delete old oval only
+    On Error Resume Next
+    ws.Shapes("RangeCircle").Delete
+    On Error GoTo CleanFail
+
+    'Scale factor: Excel points per mm
+    scalePts = 8
+
+    'Set row height from part height
+    rowHt = partH * scalePts
+    targetRange.RowHeight = rowHt
+
+    'Set column width from part width
+    colW = targetRange.Columns(1).ColumnWidth * _
+           ((partW * scalePts) / targetRange.Columns(1).Width)
+
+    targetRange.Columns.ColumnWidth = colW
+
+    'Refresh range after sizing
+    Set targetRange = ws.Range("K3").Resize(n, m)
+
+    puckWidthPts = puckD * scalePts
+    puckHeightPts = puckD * scalePts
+
+    rx = puckWidthPts / 2
+    ry = puckHeightPts / 2
+
+    baseLeft = targetRange.Left
+    baseTop = targetRange.Top
+
+    'Create oval
+    Set shp = ws.Shapes.AddShape( _
+        Type:=msoShapeOval, _
+        Left:=baseLeft, _
+        Top:=baseTop, _
+        Width:=puckWidthPts, _
+        Height:=puckHeightPts)
+
+    With shp
+        .Name = "RangeCircle"
+        .Fill.Visible = msoFalse
+        .Line.Visible = msoTrue
+        .Line.ForeColor.RGB = RGB(0, 0, 0)
+        .Line.Weight = 3
+    End With
+
+    'Fast optimized search:
+    'Instead of testing every 2 points across the whole range,
+    'only test logical offsets around the cell grid.
+    bestCount = -1
+
+    For testCX = baseLeft + rx - targetRange.Columns(1).Width To _
+                 baseLeft + rx + targetRange.Columns(1).Width _
+                 Step targetRange.Columns(1).Width / 4
+
+        For testCY = baseTop + ry - targetRange.Rows(1).Height To _
+                     baseTop + ry + targetRange.Rows(1).Height _
+                     Step targetRange.Rows(1).Height / 4
+
+            testCount = CountCellsInsideOval(targetRange, testCX, testCY, rx, ry)
+
+            If testCount > bestCount Then
+                bestCount = testCount
+                bestCX = testCX
+                bestCY = testCY
+            End If
+
+        Next testCY
+    Next testCX
+
+    'Move oval to optimized position
+    shp.Left = bestCX - rx
+    shp.Top = bestCY - ry
+
+    'Apply borders and number valid cells
+    counter = 1
+
+    For Each cell In targetRange.Cells
+
+        cell.ClearContents
+        cell.Borders.LineStyle = xlNone
+
+        If CellFullyInsideOval(cell, bestCX, bestCY, rx, ry) Then
+
+            With cell.Borders
+                .LineStyle = xlContinuous
+                .Color = RGB(255, 0, 0)
+                .Weight = xlThick
+            End With
+
+            cell.Value = counter
+            cell.HorizontalAlignment = xlCenter
+            cell.VerticalAlignment = xlCenter
+
+            counter = counter + 1
+
+        End If
+
+    Next cell
+
+    'Outputs
+    ws.Range("H10").Value = n
+    ws.Range("H11").Value = m
+    ws.Range("H12").Value = bestCount
+
+CleanExit:
+    Application.StatusBar = False
+    Application.ScreenUpdating = True
+    Application.EnableEvents = True
+    Application.Calculation = oldCalc
+    Exit Sub
+
+CleanFail:
+    MsgBox "Macro stopped because of an error: " & Err.Description, vbExclamation
+    Resume CleanExit
+
+End Sub
+
+
+Function CountCellsInsideOval(targetRange As Range, _
+                              cx As Double, cy As Double, _
+                              rx As Double, ry As Double) As Long
+
+    Dim cell As Range
+    Dim countInside As Long
+
+    countInside = 0
+
+    For Each cell In targetRange.Cells
+        If CellFullyInsideOval(cell, cx, cy, rx, ry) Then
+            countInside = countInside + 1
+        End If
+    Next cell
+
+    CountCellsInsideOval = countInside
+
+End Function
+
+
+Function CellFullyInsideOval(cell As Range, _
+                             cx As Double, cy As Double, _
+                             rx As Double, ry As Double) As Boolean
+
+    CellFullyInsideOval = _
+        PointInsideOval(cell.Left, cell.Top, cx, cy, rx, ry) And _
+        PointInsideOval(cell.Left + cell.Width, cell.Top, cx, cy, rx, ry) And _
+        PointInsideOval(cell.Left, cell.Top + cell.Height, cx, cy, rx, ry) And _
+        PointInsideOval(cell.Left + cell.Width, cell.Top + cell.Height, cx, cy, rx, ry)
+
+End Function
+
+
+Function PointInsideOval(x As Double, y As Double, _
+                         cx As Double, cy As Double, _
+                         rx As Double, ry As Double) As Boolean
+
+    Dim v As Double
+
+    v = (((x - cx) * (x - cx)) / (rx * rx)) + _
+        (((y - cy) * (y - cy)) / (ry * ry))
+
+    PointInsideOval = v <= 1
+
+End Function
