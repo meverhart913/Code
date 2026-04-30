@@ -1,0 +1,98 @@
+Sub RecountIgnoringBlackDefects()
+
+    Dim ws As Worksheet
+    Dim targetRange As Range
+    Dim cell As Range
+    Dim shp As Shape
+
+    Dim n As Long
+    Dim m As Long
+    Dim cx As Double
+    Dim cy As Double
+    Dim rx As Double
+    Dim ry As Double
+    Dim counter As Long
+
+    Set ws = ActiveSheet
+
+    'Uses calculated rows/columns from first macro
+    n = ws.Range("H10").Value
+    m = ws.Range("H11").Value
+
+    If n <= 0 Or m <= 0 Then
+        MsgBox "Run the optimized puck layout macro first.", vbExclamation
+        Exit Sub
+    End If
+
+    Set targetRange = ws.Range("K3").Resize(n, m)
+
+    On Error Resume Next
+    Set shp = ws.Shapes("RangeCircle")
+    On Error GoTo 0
+
+    If shp Is Nothing Then
+        MsgBox "RangeCircle not found. Run the optimized puck layout macro first.", vbExclamation
+        Exit Sub
+    End If
+
+    cx = shp.Left + shp.Width / 2
+    cy = shp.Top + shp.Height / 2
+    rx = shp.Width / 2
+    ry = shp.Height / 2
+
+    counter = 1
+
+    For Each cell In targetRange.Cells
+
+        'Only count cells fully inside oval AND not black-filled
+        If CellFullyInsideOval(cell, cx, cy, rx, ry) And Not IsBlackFilled(cell) Then
+
+            cell.Value = counter
+            cell.HorizontalAlignment = xlCenter
+            cell.VerticalAlignment = xlCenter
+            cell.Font.Size = 10
+            cell.Font.Bold = True
+            cell.Font.Color = RGB(0, 0, 0)
+
+            With cell.Borders
+                .LineStyle = xlContinuous
+                .Color = RGB(255, 0, 0)
+                .Weight = xlThick
+            End With
+
+            counter = counter + 1
+
+        ElseIf IsBlackFilled(cell) Then
+
+            'Defect cells stay black but are not counted
+            cell.ClearContents
+
+            With cell.Borders
+                .LineStyle = xlContinuous
+                .Color = RGB(255, 0, 0)
+                .Weight = xlThick
+            End With
+
+        Else
+
+            'Outside oval
+            cell.ClearContents
+            cell.Borders.LineStyle = xlNone
+
+        End If
+
+    Next cell
+
+    'Defect-adjusted usable part count
+    ws.Range("H12").Value = counter - 1
+
+End Sub
+
+
+Function IsBlackFilled(cell As Range) As Boolean
+
+    IsBlackFilled = _
+        cell.Interior.Color = RGB(0, 0, 0) Or _
+        cell.DisplayFormat.Interior.Color = RGB(0, 0, 0)
+
+End Function
