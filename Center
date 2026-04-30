@@ -1,0 +1,44 @@
+'----------------------------------------
+' OPTIMIZE OVAL POSITION
+' If count ties, choose most centered position
+'----------------------------------------
+Dim centeredCX As Double
+Dim centeredCY As Double
+Dim testDist As Double
+Dim bestDist As Double
+
+stepSize = 1
+bestCount = 0
+bestDist = 1E+30
+
+'Centered position based on target range
+centeredCX = targetRange.Left + targetRange.Width / 2
+centeredCY = targetRange.Top + targetRange.Height / 2
+
+For testCX = targetRange.Left + rx To targetRange.Left + targetRange.Width - rx Step stepSize
+    For testCY = targetRange.Top + ry To targetRange.Top + targetRange.Height - ry Step stepSize
+
+        testCount = 0
+
+        For Each cell In targetRange.Cells
+            If CellFullyInsideOval(cell, testCX, testCY, rx, ry) Then
+                testCount = testCount + 1
+            End If
+        Next cell
+
+        'Distance from centered position
+        testDist = ((testCX - centeredCX) * (testCX - centeredCX)) + _
+                   ((testCY - centeredCY) * (testCY - centeredCY))
+
+        If testCount > bestCount Or _
+           (testCount = bestCount And testDist < bestDist) Then
+
+            bestCount = testCount
+            bestCX = testCX
+            bestCY = testCY
+            bestDist = testDist
+
+        End If
+
+    Next testCY
+Next testCX
