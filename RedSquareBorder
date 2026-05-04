@@ -11,7 +11,7 @@ Sub BuildOptimizedPuckLayout()
     Dim partW As Double
     Dim partH As Double
     Dim puckD As Double
-
+    Dim kerf As Double
     Dim m As Long
     Dim n As Long
 
@@ -38,9 +38,10 @@ Sub BuildOptimizedPuckLayout()
     'H4 = part width in mm
     'H5 = part height in mm
     'H6 = puck diameter in mm
-    partW = ws.Range("H4").Value
-    partH = ws.Range("H5").Value
-    puckD = ws.Range("H6").Value
+    kerf  = ws.Range("A2").Value
+    partW = ws.Range("A3").Value
+    partH = ws.Range("A4").Value
+    puckD = ws.Range("A5").Value
 
     If partW <= 0 Or partH <= 0 Or puckD <= 0 Then
         MsgBox "H4, H5, and H6 must all be greater than zero.", vbExclamation
