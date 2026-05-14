@@ -1,4 +1,4 @@
-Option Explicit
+I'llOption Explicit
 
 Sub BuildOptimizedPuckLayout()
 
@@ -213,3 +213,49 @@ SELECT measurements_log.item_id, measurements_log.param_no, measurements_log.mea
 FROM products.dbo.measurements_log measurements_log, products.dbo.parameter_master parameter_master
 WHERE parameter_master.param_no = measurements_log.param_no AND ((measurements_log.item_id Like '%+A26%') AND (measurements_log.last_tag_item_param_flag=1) AND (measurements_log.param_no In (905,906,1236,1237)))
 ORDER BY measurements_log.item_id
+
+
+SELECT
+    ml.item_id,
+
+    CASE
+        WHEN LEFT(ml.item_id, 2) = '1+' THEN 'Upper'
+        WHEN LEFT(ml.item_id, 2) = '2+' THEN 'Lower'
+        ELSE 'Unknown'
+    END AS slice_position,
+
+    SUBSTRING(ml.item_id, CHARINDEX('+', ml.item_id) + 1, LEN(ml.item_id)) AS boule_id,
+
+    ml.param_no,
+
+    pm.param_desc,
+
+    CASE
+        WHEN ml.param_no IN (1236, 1237) THEN 'Pre Anneal'
+        WHEN ml.param_no IN (905, 906) THEN 'Post Anneal'
+        ELSE 'Unknown'
+    END AS anneal_stage,
+
+    CASE
+        WHEN ml.param_no IN (905, 1236) THEN 'Inner'
+        WHEN ml.param_no IN (906, 1237) THEN 'Outer'
+        ELSE 'Unknown'
+    END AS ring_position,
+
+    ml.meas_date,
+    ml.meas_value
+
+FROM products.dbo.measurements_log ml
+JOIN products.dbo.parameter_master pm
+    ON pm.param_no = ml.param_no
+
+WHERE
+    ml.item_id LIKE '%+A26%'
+    AND ml.last_tag_item_param_flag = 1
+    AND ml.param_no IN (905, 906, 1236, 1237)
+
+ORDER BY
+    boule_id,
+    slice_position,
+    anneal_stage,
+    ring_position;
