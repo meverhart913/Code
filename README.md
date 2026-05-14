@@ -259,3 +259,84 @@ ORDER BY
     slice_position,
     anneal_stage,
     ring_position;
+
+
+WITH ActiveInventory AS (
+    SELECT
+        bt.boule_id,
+        bt.tier_id,
+        bt.tier_length_mm,
+        bt.tier_start_mm
+    FROM products.dbo.boule_tiers bt
+    WHERE
+        bt.material_no = 54
+        AND bt.tier_status = 1
+),
+
+LatestMeasurements AS (
+    SELECT
+        ml.item_id,
+
+        CASE
+            WHEN LEFT(ml.item_id, 2) = '1+' THEN 'Upper'
+            WHEN LEFT(ml.item_id, 2) = '2+' THEN 'Lower'
+            ELSE 'Unknown'
+        END AS slice_position,
+
+        SUBSTRING(ml.item_id, CHARINDEX('+', ml.item_id) + 1, LEN(ml.item_id)) AS boule_id,
+
+        ml.param_no,
+        pm.param_desc,
+
+        CASE
+            WHEN ml.param_no IN (1236, 1237) THEN 'Pre Anneal'
+            WHEN ml.param_no IN (905, 906) THEN 'Post Anneal'
+            ELSE 'Unknown'
+        END AS anneal_stage,
+
+        CASE
+            WHEN ml.param_no IN (905, 1236) THEN 'Inner'
+            WHEN ml.param_no IN (906, 1237) THEN 'Outer'
+            ELSE 'Unknown'
+        END AS ring_position,
+
+        ml.meas_date,
+        ml.meas_value,
+
+        ROW_NUMBER() OVER (
+            PARTITION BY ml.item_id, ml.param_no
+            ORDER BY ml.meas_date DESC
+        ) AS rn
+
+    FROM products.dbo.measurements_log ml
+    JOIN products.dbo.parameter_master pm
+        ON pm.param_no = ml.param_no
+    WHERE
+        ml.param_no IN (905, 906, 1236, 1237)
+)
+
+SELECT
+    ai.boule_id,
+    ai.tier_id,
+    ai.tier_length_mm,
+    ai.tier_start_mm,
+
+    lm.item_id,
+    lm.slice_position,
+    lm.param_no,
+    lm.param_desc,
+    lm.anneal_stage,
+    lm.ring_position,
+    lm.meas_date,
+    lm.meas_value
+
+FROM ActiveInventory ai
+LEFT JOIN LatestMeasurements lm
+    ON lm.boule_id = ai.boule_id
+    AND lm.rn = 1
+
+ORDER BY
+    ai.boule_id,
+    lm.slice_position,
+    lm.anneal_stage,
+    lm.ring_position;
