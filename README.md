@@ -206,3 +206,38 @@ Function PointInsideOval(x As Double, y As Double, _
     PointInsideOval = v <= 1
 
 End Function
+
+
+
+WITH RankedMeasurements AS (
+    SELECT 
+        ap.order_id,
+        ap.serial_id,
+        ml.param_no,
+        ml.meas_value,
+        ml.meas_date,
+        ROW_NUMBER() OVER (
+            PARTITION BY ap.serial_id, ml.param_no
+            ORDER BY ml.meas_date DESC
+        ) AS rn
+    FROM products.dbo.active_parts AS ap
+    INNER JOIN products.dbo.measurements_log AS ml
+        ON ap.tag_id = ml.tag_id
+    WHERE ap.order_id = ?
+      AND ml.meas_value_type = 'F'
+      AND ml.param_no IN (119, 120, 432, 534)
+)
+SELECT
+    order_id,
+    serial_id,
+    MAX(CASE WHEN param_no = 119 THEN meas_value END) AS overall_length,
+    MAX(CASE WHEN param_no = 120 THEN meas_value END) AS diameter,
+    MAX(CASE WHEN param_no = 432 THEN meas_value END) AS cr4_length,
+    MAX(CASE WHEN param_no = 534 THEN meas_value END) AS transmission_percent
+FROM RankedMeasurements
+WHERE rn = 1
+GROUP BY 
+    order_id,
+    serial_id
+ORDER BY 
+    serial_id;
