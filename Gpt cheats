@@ -1,0 +1,156 @@
+# ChatGPT Command Library
+
+## Core Execution Commands
+
+/firstfailure - Identify the first point where the system or habit failed and ignore downstream symptoms.
+
+/next10 - Generate the next action that can be completed in 10 minutes or less.
+
+/constraint - Convert a vague idea into concrete rules, limits, and pass/fail criteria.
+
+/killoption - Eliminate the weakest option and explain why it should be cut.
+
+/goodenough - Define the minimum acceptable version to prevent overbuilding or perfectionism.
+
+/frictionaudit - Identify what makes a task difficult to start, repeat, or sustain consistently.
+
+/truthscore - Score an idea based on realism and execution potential rather than excitement.
+
+/pattern - Detect repeated behaviors, decisions, or loops across recent actions.
+
+/antiproject - Identify ideas that should NOT become projects or ongoing commitments.
+
+/oneweekrule - Create a 7-day test before fully committing time, money, or energy.
+
+
+## Business & Creative Commands
+
+/boothmath - Evaluate a booth/thrift item by profit potential, labor, storage burden, and style fit.
+
+/buyerbrain - Analyze an item from the customer’s perspective instead of the creator’s perspective.
+
+/punkornot - Decide whether something genuinely fits your booth/style or just imitates the aesthetic.
+
+/workbridge - Translate ideas into formats that can realistically move into your work environment.
+
+/signalvsnoise - Separate meaningful information from distraction and novelty.
+
+/compression - Turn a complex system into a few core principles.
+
+/simplicity - Remove unnecessary layers, tools, or steps from a process.
+
+/fieldtest - Design a real-world experiment instead of theorizing.
+
+/minimumviable - Strip an idea down to the smallest usable version.
+
+/maintenancecost - Estimate the ongoing upkeep burden of an idea or system.
+
+
+## Decision-Making Commands
+
+/debate - Argue both sides of a decision with equal strength before concluding.
+
+/steelman - Present the strongest possible version of an opposing viewpoint.
+
+/score - Assign weighted scores to competing options using defined criteria.
+
+/stackrank - Force strict ranking instead of “everything matters.”
+
+/tradeoffs - Explain what must be sacrificed for each option to work.
+
+/floorceiling - Define the minimum (floor) and maximum (ceiling) realistic outcomes.
+
+/irreversible - Identify which decisions are hard to undo and deserve caution.
+
+/sunkcost - Evaluate whether continuing is justified or just emotional attachment.
+
+/secondorder - Analyze downstream consequences beyond the immediate result.
+
+/realitycheck - Compare imagined outcomes to statistically likely outcomes.
+
+
+## Self-Awareness Commands
+
+/driftcheck - Compare current behavior against stated goals and identify divergence.
+
+/energycheck - Determine whether a plan matches actual energy/time capacity.
+
+/dopaminecheck - Determine whether you want this for meaning or stimulation.
+
+/resistance - Identify what part of the task you are unconsciously avoiding.
+
+/identitytrap - Detect where identity/aesthetic is replacing actual outcomes.
+
+/consistencycheck - Compare beliefs, goals, and actions for contradictions.
+
+/narrative - Explain the story you’re telling yourself and whether it matches reality.
+
+/blindspot - Identify what you may be systematically overlooking.
+
+/unlearn - Identify assumptions or habits that are outdated, false, or holding you back.
+
+/truthmode - Strip away comfort framing and focus only on the most likely reality.
+
+
+## Planning, Systems & Productivity Commands
+
+/reverse - Start from the desired outcome and work backward to identify necessary actions.
+
+/bottleneck - Find the single biggest constraint limiting progress.
+
+/80-20 - Find the small number of actions creating most of the results.
+
+/environmentdesign - Modify surroundings to make desired behavior easier by default.
+
+/precommit - Create rules now to prevent predictable future failure.
+
+/automationcheck - Determine what should become automatic versus intentional.
+
+/anchor - Create a reliable trigger behavior tied to an existing routine.
+
+/threshold - Define the exact condition where action should change.
+
+/timewarp - Estimate how long this will actually take instead of optimistic guesses.
+
+/scopecreep - Identify where a simple idea is becoming bloated.
+
+/proof - Define objective evidence that something is working.
+
+/stability - Evaluate whether a system can survive stress, boredom, and bad weeks.
+
+/failuremap - Predict the most likely ways this fails in practice.
+
+/escapehatch - Define how to safely exit a commitment if needed.
+
+/debt - Identify accumulated physical, emotional, financial, or organizational debt.
+
+/deadweight - Identify habits, possessions, subscriptions, or projects adding little value.
+
+
+## Communication & Information Commands
+
+/tldr - Compress information into the shortest useful summary possible.
+
+/eli5 - Explain something in simple terms as if to a 5-year-old.
+
+/eli10 - Explain something in simple terms as if to a 10-year-old.
+
+/human - Rewrite something to sound more natural, grounded, and less robotic.
+
+/translation - Convert expert or technical language into plain English.
+
+/5whys - Repeatedly ask “why” to uncover the root cause of a problem.
+
+/redflags - Identify hidden risks, weak assumptions, or likely failure points.
+
+/opsec - Analyze privacy, security, reputational, or workplace exposure risks.
+
+/ownership - Clarify what is truly your responsibility versus someone else’s.
+
+/futureyou - Respond from the perspective of your future self after consequences have played out.
+
+/futureyou-short - Quick guidance from your future self.
+
+/futureyou-detailed - In-depth future self analysis.
+
+/futureyou-10y - Advice from yourself 10 years in the future.
