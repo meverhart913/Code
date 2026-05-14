@@ -1,0 +1,4 @@
+SELECT measurements_log.item_id, measurements_log.param_no, measurements_log.meas_date, measurements_log.meas_value, parameter_master.param_desc
+FROM products.dbo.measurements_log measurements_log, products.dbo.parameter_master parameter_master
+WHERE parameter_master.param_no = measurements_log.param_no AND ((measurements_log.item_id Like '%+A26%') AND (measurements_log.last_tag_item_param_flag=1) AND (measurements_log.param_no In (905,906,1236,1237)))
+ORDER BY measurements_log.item_id
