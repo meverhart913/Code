@@ -380,3 +380,203 @@ CleanFail:
     MsgBox "Inventory update failed: " & Err.Description, vbExclamation
 
 End Sub
+
+Option Explicit
+
+Sub DrawBouleGradient()
+
+    Const WS_INV As String = "Inventory"
+    Const WS_DATA As String = "Data"
+    Const TBL_DATA As String = "DataTable1"
+
+    Const START_CELL As String = "K4"
+    Const SEGMENT_MM As Double = 10
+
+    Dim wsI As Worksheet, wsD As Worksheet
+    Dim lo As ListObject
+    Dim bouleID As String
+    Dim lowerLimit As Double, upperLimit As Double
+
+    Dim tierLength As Double, tierStart As Double
+    Dim fullLength As Double
+    Dim segmentCount As Long
+    Dim r As Long
+
+    Dim preUpperAvg As Double, preLowerAvg As Double
+    Dim postUpperAvg As Double, postLowerAvg As Double
+
+    Dim posFromTop As Double
+    Dim preAlpha As Double, postAlpha As Double
+
+    Dim startRange As Range, drawRange As Range
+
+    Set wsI = ThisWorkbook.Worksheets(WS_INV)
+    Set wsD = ThisWorkbook.Worksheets(WS_DATA)
+    Set lo = wsD.ListObjects(TBL_DATA)
+
+    bouleID = Trim(wsI.Range("J2").Value)
+
+    If bouleID = "" Then
+        MsgBox "Select a boule ID in J2 first.", vbExclamation
+        Exit Sub
+    End If
+
+    If Not IsNumeric(wsI.Range("B2").Value) Or Not IsNumeric(wsI.Range("C2").Value) Then
+        MsgBox "Lower and upper limits must be numeric.", vbExclamation
+        Exit Sub
+    End If
+
+    lowerLimit = CDbl(wsI.Range("B2").Value)
+    upperLimit = CDbl(wsI.Range("C2").Value)
+
+    If lowerLimit > upperLimit Then
+        MsgBox "Lower limit cannot be greater than upper limit.", vbExclamation
+        Exit Sub
+    End If
+
+    tierLength = GetFirstNumeric(lo, bouleID, "tier_length_mm")
+    tierStart = GetFirstNumeric(lo, bouleID, "tier_start_mm")
+
+    If tierLength <= 0 Then
+        MsgBox "No valid tier_length_mm found for " & bouleID & ".", vbExclamation
+        Exit Sub
+    End If
+
+    fullLength = tierStart + tierLength
+
+    preUpperAvg = GetMeasurementAvg(lo, bouleID, "Pre Anneal", "Upper")
+    preLowerAvg = GetMeasurementAvg(lo, bouleID, "Pre Anneal", "Lower")
+
+    postUpperAvg = GetMeasurementAvg(lo, bouleID, "Post Anneal", "Upper")
+    postLowerAvg = GetMeasurementAvg(lo, bouleID, "Post Anneal", "Lower")
+
+    If preUpperAvg = -1 Or preLowerAvg = -1 Or postUpperAvg = -1 Or postLowerAvg = -1 Then
+        MsgBox "Missing required upper/lower pre or post anneal measurements for " & bouleID & ".", vbExclamation
+        Exit Sub
+    End If
+
+    Set startRange = wsI.Range(START_CELL)
+
+    wsI.Range("K4:L200").Clear
+    wsI.Range("K4:L200").Interior.Pattern = xlNone
+    wsI.Range("K4:L200").Borders.LineStyle = xlNone
+
+    segmentCount = Application.WorksheetFunction.RoundUp(tierLength / SEGMENT_MM, 0)
+
+    For r = 1 To segmentCount
+
+        posFromTop = tierStart + ((r - 0.5) * SEGMENT_MM)
+
+        If posFromTop > fullLength Then
+            posFromTop = fullLength - ((fullLength - tierStart) / 2)
+        End If
+
+        preAlpha = LinearAlpha(posFromTop, fullLength, preUpperAvg, preLowerAvg)
+        postAlpha = LinearAlpha(posFromTop, fullLength, postUpperAvg, postLowerAvg)
+
+        startRange.Offset(r - 1, 0).Value = Round(preAlpha, 3)
+        startRange.Offset(r - 1, 1).Value = Round(postAlpha, 3)
+
+        If preAlpha >= lowerLimit And preAlpha <= upperLimit Then
+            startRange.Offset(r - 1, 0).Interior.Color = RGB(198, 239, 206)
+        End If
+
+        If postAlpha >= lowerLimit And postAlpha <= upperLimit Then
+            startRange.Offset(r - 1, 1).Interior.Color = RGB(198, 239, 206)
+        End If
+
+    Next r
+
+    Set drawRange = wsI.Range(startRange, startRange.Offset(segmentCount - 1, 1))
+
+    With drawRange.Borders(xlEdgeLeft)
+        .LineStyle = xlContinuous
+        .Weight = xlThick
+    End With
+
+    With drawRange.Borders(xlEdgeRight)
+        .LineStyle = xlContinuous
+        .Weight = xlThick
+    End With
+
+    With drawRange.Borders(xlEdgeTop)
+        .LineStyle = xlContinuous
+        .Weight = xlThick
+    End With
+
+    With drawRange.Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous
+        .Weight = xlThick
+    End With
+
+    drawRange.HorizontalAlignment = xlCenter
+    drawRange.VerticalAlignment = xlCenter
+    drawRange.NumberFormat = "0.000"
+
+End Sub
+
+Private Function LinearAlpha(ByVal posFromTop As Double, ByVal fullLength As Double, ByVal upperAvg As Double, ByVal lowerAvg As Double) As Double
+    If fullLength = 0 Then
+        LinearAlpha = upperAvg
+    Else
+        LinearAlpha = upperAvg + (posFromTop / fullLength) * (lowerAvg - upperAvg)
+    End If
+End Function
+
+Private Function GetMeasurementAvg(ByVal lo As ListObject, ByVal bouleID As String, ByVal annealStage As String, ByVal slicePosition As String) As Double
+
+    Dim i As Long
+    Dim total As Double
+    Dim countVals As Long
+
+    Dim colBoule As Long, colStage As Long, colSlice As Long, colRing As Long, colValue As Long
+
+    colBoule = lo.ListColumns("boule_id").Index
+    colStage = lo.ListColumns("anneal_stage").Index
+    colSlice = lo.ListColumns("slice_position").Index
+    colRing = lo.ListColumns("ring_position").Index
+    colValue = lo.ListColumns("meas_value").Index
+
+    For i = 1 To lo.DataBodyRange.Rows.Count
+
+        If Trim(lo.DataBodyRange.Cells(i, colBoule).Value) = bouleID _
+           And Trim(lo.DataBodyRange.Cells(i, colStage).Value) = annealStage _
+           And Trim(lo.DataBodyRange.Cells(i, colSlice).Value) = slicePosition _
+           And Trim(lo.DataBodyRange.Cells(i, colRing).Value) <> "Unknown" _
+           And IsNumeric(lo.DataBodyRange.Cells(i, colValue).Value) Then
+
+            total = total + CDbl(lo.DataBodyRange.Cells(i, colValue).Value)
+            countVals = countVals + 1
+
+        End If
+
+    Next i
+
+    If countVals = 0 Then
+        GetMeasurementAvg = -1
+    Else
+        GetMeasurementAvg = total / countVals
+    End If
+
+End Function
+
+Private Function GetFirstNumeric(ByVal lo As ListObject, ByVal bouleID As String, ByVal columnName As String) As Double
+
+    Dim i As Long
+    Dim colBoule As Long, colTarget As Long
+
+    colBoule = lo.ListColumns("boule_id").Index
+    colTarget = lo.ListColumns(columnName).Index
+
+    For i = 1 To lo.DataBodyRange.Rows.Count
+        If Trim(lo.DataBodyRange.Cells(i, colBoule).Value) = bouleID Then
+            If IsNumeric(lo.DataBodyRange.Cells(i, colTarget).Value) Then
+                GetFirstNumeric = CDbl(lo.DataBodyRange.Cells(i, colTarget).Value)
+                Exit Function
+            End If
+        End If
+    Next i
+
+    GetFirstNumeric = 0
+
+End Function
