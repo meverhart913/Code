@@ -805,3 +805,22 @@ Private Function GetFirstNumeric(ByVal lo As ListObject, ByVal bouleID As String
     GetFirstNumeric = 0
 
 End Function
+
+Private Sub Worksheet_SelectionChange(ByVal Target As Range)
+
+    On Error GoTo SafeExit
+
+    'Only trigger for single-cell selections in column A
+    If Target.CountLarge > 1 Then Exit Sub
+    If Target.Column <> 1 Then Exit Sub
+    If Target.Row < 5 Then Exit Sub
+    If Trim(Target.Value) = "" Then Exit Sub
+
+    Application.EnableEvents = False
+
+    DrawBouleGradient
+
+SafeExit:
+    Application.EnableEvents = True
+
+End Sub
