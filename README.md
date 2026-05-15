@@ -523,6 +523,231 @@ Private Function LinearAlpha(ByVal posFromTop As Double, ByVal fullLength As Dou
     End If
 End Function
 
+Option Explicit
+
+Sub DrawBouleGradient()
+
+    Const WS_INV As String = "Inventory"
+    Const WS_DATA As String = "Data"
+    Const TBL_DATA As String = "DataTable1"
+
+    Const START_CELL As String = "K4"
+    Const SEGMENT_MM As Double = 10
+
+    Dim wsI As Worksheet, wsD As Worksheet
+    Dim lo As ListObject
+    Dim bouleID As String
+    Dim lowerLimit As Double, upperLimit As Double
+
+    Dim tierLength As Double, tierStart As Double
+    Dim fullLength As Double
+    Dim segmentCount As Long
+    Dim r As Long
+
+    Dim preUpperAvg As Double, preLowerAvg As Double
+    Dim postUpperAvg As Double, postLowerAvg As Double
+
+    Dim posFromTopFull As Double
+    Dim preAlpha As Double, postAlpha As Double
+
+    Dim startRange As Range, drawRange As Range
+    Dim preFirst As Long, preLast As Long
+    Dim postFirst As Long, postLast As Long
+
+    Set wsI = ThisWorkbook.Worksheets(WS_INV)
+    Set wsD = ThisWorkbook.Worksheets(WS_DATA)
+    Set lo = wsD.ListObjects(TBL_DATA)
+
+    'J2 may contain "A26-528 | T | 113mm"
+    bouleID = Left(Trim(wsI.Range("J2").Value), 7)
+
+    If bouleID = "" Then
+        MsgBox "Select a boule ID in J2 first.", vbExclamation
+        Exit Sub
+    End If
+
+    If Not IsNumeric(wsI.Range("B2").Value) Or Not IsNumeric(wsI.Range("C2").Value) Then
+        MsgBox "Lower and upper limits must be numeric.", vbExclamation
+        Exit Sub
+    End If
+
+    lowerLimit = CDbl(wsI.Range("B2").Value)
+    upperLimit = CDbl(wsI.Range("C2").Value)
+
+    If lowerLimit > upperLimit Then
+        MsgBox "Lower limit cannot be greater than upper limit.", vbExclamation
+        Exit Sub
+    End If
+
+    tierLength = GetFirstNumeric(lo, bouleID, "tier_length_mm")
+    tierStart = GetFirstNumeric(lo, bouleID, "tier_start_mm")
+
+    If tierLength <= 0 Then
+        MsgBox "No valid tier_length_mm found for " & bouleID & ".", vbExclamation
+        Exit Sub
+    End If
+
+    fullLength = tierStart + tierLength
+
+    preUpperAvg = GetMeasurementAvg(lo, bouleID, "Pre Anneal", "Upper")
+    preLowerAvg = GetMeasurementAvg(lo, bouleID, "Pre Anneal", "Lower")
+    postUpperAvg = GetMeasurementAvg(lo, bouleID, "Post Anneal", "Upper")
+    postLowerAvg = GetMeasurementAvg(lo, bouleID, "Post Anneal", "Lower")
+
+    If preUpperAvg = -1 Or preLowerAvg = -1 Or postUpperAvg = -1 Or postLowerAvg = -1 Then
+        MsgBox "Missing required upper/lower pre or post anneal measurements for " & bouleID & ".", vbExclamation
+        Exit Sub
+    End If
+
+    Set startRange = wsI.Range(START_CELL)
+
+    'Clear old diagram and labels
+    wsI.Range("J3:M200").Clear
+    wsI.Range("J3:M200").Interior.Pattern = xlNone
+    wsI.Range("J3:M200").Borders.LineStyle = xlNone
+
+    wsI.Range("K3").Value = "Pre"
+    wsI.Range("L3").Value = "Post"
+    wsI.Range("K3:L3").HorizontalAlignment = xlCenter
+    wsI.Range("K3:L3").Font.Bold = True
+
+    segmentCount = Application.WorksheetFunction.RoundUp(tierLength / SEGMENT_MM, 0)
+
+    preFirst = 0
+    preLast = 0
+    postFirst = 0
+    postLast = 0
+
+    For r = 1 To segmentCount
+
+        'Midpoint of each 10mm section within current tier,
+        'converted back to distance from original full boule top.
+        posFromTopFull = tierStart + ((r - 0.5) * SEGMENT_MM)
+
+        If posFromTopFull > fullLength Then
+            posFromTopFull = fullLength
+        End If
+
+        preAlpha = LinearAlpha(posFromTopFull, fullLength, preUpperAvg, preLowerAvg)
+        postAlpha = LinearAlpha(posFromTopFull, fullLength, postUpperAvg, postLowerAvg)
+
+        'Keep cells blank for cleaner visual
+        startRange.Offset(r - 1, 0).Value = ""
+        startRange.Offset(r - 1, 1).Value = ""
+
+        'Pre Anneal in-spec fill
+        If preAlpha >= lowerLimit And preAlpha <= upperLimit Then
+            startRange.Offset(r - 1, 0).Interior.Color = RGB(198, 239, 206)
+            If preFirst = 0 Then preFirst = r
+            preLast = r
+        End If
+
+        'Post Anneal in-spec fill
+        If postAlpha >= lowerLimit And postAlpha <= upperLimit Then
+            startRange.Offset(r - 1, 1).Interior.Color = RGB(198, 239, 206)
+            If postFirst = 0 Then postFirst = r
+            postLast = r
+        End If
+
+    Next r
+
+    Set drawRange = wsI.Range(startRange, startRange.Offset(segmentCount - 1, 1))
+
+    'Light internal borders
+    With drawRange.Borders
+        .LineStyle = xlContinuous
+        .Weight = xlThin
+        .Color = RGB(200, 200, 200)
+    End With
+
+    'Heavy outside border
+    With drawRange.Borders(xlEdgeLeft)
+        .LineStyle = xlContinuous
+        .Weight = xlThick
+        .Color = RGB(0, 0, 0)
+    End With
+
+    With drawRange.Borders(xlEdgeRight)
+        .LineStyle = xlContinuous
+        .Weight = xlThick
+        .Color = RGB(0, 0, 0)
+    End With
+
+    With drawRange.Borders(xlEdgeTop)
+        .LineStyle = xlContinuous
+        .Weight = xlThick
+        .Color = RGB(0, 0, 0)
+    End With
+
+    With drawRange.Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous
+        .Weight = xlThick
+        .Color = RGB(0, 0, 0)
+    End With
+
+    drawRange.HorizontalAlignment = xlCenter
+    drawRange.VerticalAlignment = xlCenter
+
+    'Outside labels
+    AddRangeLabels wsI, preFirst, preLast, startRange.Row, "J", "Pre", tierLength, SEGMENT_MM
+    AddRangeLabels wsI, postFirst, postLast, startRange.Row, "M", "Post", tierLength, SEGMENT_MM
+
+    wsI.Columns("J:M").AutoFit
+
+End Sub
+
+Private Sub AddRangeLabels( _
+    ByVal ws As Worksheet, _
+    ByVal firstRowIndex As Long, _
+    ByVal lastRowIndex As Long, _
+    ByVal diagramStartRow As Long, _
+    ByVal labelCol As String, _
+    ByVal labelName As String, _
+    ByVal tierLength As Double, _
+    ByVal segmentMM As Double)
+
+    Dim startMM As Double
+    Dim endMM As Double
+    Dim labelRow As Long
+
+    If firstRowIndex = 0 Then
+        ws.Range(labelCol & diagramStartRow).Value = labelName & ": No in-spec section"
+        ws.Range(labelCol & diagramStartRow).Font.Bold = True
+        Exit Sub
+    End If
+
+    'This follows your example:
+    'row 4 = 40mm if first 3 rows are out of range
+    startMM = firstRowIndex * segmentMM
+    endMM = lastRowIndex * segmentMM
+
+    If startMM > tierLength Then startMM = tierLength
+    If endMM > tierLength Then endMM = tierLength
+
+    labelRow = diagramStartRow + firstRowIndex - 1
+
+    ws.Range(labelCol & labelRow).Value = labelName & ": " & _
+        Format(startMM, "0") & "mm - " & Format(endMM, "0") & "mm"
+
+    ws.Range(labelCol & labelRow).Font.Bold = True
+    ws.Range(labelCol & labelRow).HorizontalAlignment = xlRight
+
+End Sub
+
+Private Function LinearAlpha( _
+    ByVal posFromTop As Double, _
+    ByVal fullLength As Double, _
+    ByVal upperAvg As Double, _
+    ByVal lowerAvg As Double) As Double
+
+    If fullLength = 0 Then
+        LinearAlpha = upperAvg
+    Else
+        LinearAlpha = upperAvg + (posFromTop / fullLength) * (lowerAvg - upperAvg)
+    End If
+
+End Function
+
 Private Function GetMeasurementAvg(ByVal lo As ListObject, ByVal bouleID As String, ByVal annealStage As String, ByVal slicePosition As String) As Double
 
     Dim i As Long
