@@ -340,3 +340,43 @@ ORDER BY
     lm.slice_position,
     lm.anneal_stage,
     lm.ring_position;
+
+
+Sub FindInventory()
+
+    On Error GoTo CleanFail
+
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    Application.Calculation = xlCalculationManual
+    Application.StatusBar = "Refreshing SQL data..."
+
+    'Refresh SQL / query tables
+    ThisWorkbook.RefreshAll
+    Application.CalculateUntilAsyncQueriesDone
+
+    Application.StatusBar = "Recalculating helper columns..."
+
+    'Force Data table helper formulas to recalculate
+    Worksheets("Data").ListObjects("DataTable1").Range.Calculate
+
+    'Force Inventory formulas to recalculate
+    Worksheets("Inventory").Calculate
+
+    'Optional stronger full workbook calc if needed
+    Application.CalculateFull
+
+CleanExit:
+    Application.StatusBar = False
+    Application.EnableEvents = True
+    Application.ScreenUpdating = True
+    MsgBox "Inventory updated.", vbInformation
+    Exit Sub
+
+CleanFail:
+    Application.StatusBar = False
+    Application.EnableEvents = True
+    Application.ScreenUpdating = True
+    MsgBox "Inventory update failed: " & Err.Description, vbExclamation
+
+End Sub
