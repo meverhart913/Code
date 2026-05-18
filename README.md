@@ -1,4 +1,4 @@
-I'llOption Explicit
+1wI'llOption Explicit
 
 Sub BuildOptimizedPuckLayout()
 
@@ -874,3 +874,72 @@ AND parameter_master.param_desc IN (
 GROUP BY inventory.part_id, measurements_log.item_id
 
 ORDER BY inventory.part_id, measurements_log.item_id;
+
+
+SELECT
+    pm.part_id,
+    pm.part_rev,
+    pm.part_desc,
+
+    MAX(CASE WHEN prm.param_desc = 'E1_E2 OVERALL LENGTH'
+        THEN ps.param_value_min END) AS Min_Length,
+    MAX(CASE WHEN prm.param_desc = 'E1_E2 OVERALL LENGTH'
+        THEN ps.param_value_max END) AS Max_Length,
+
+    MAX(CASE WHEN prm.param_desc = 'S3_S4 (OVERALL WIDTH)'
+        THEN ps.param_value_min END) AS Min_Width,
+    MAX(CASE WHEN prm.param_desc = 'S3_S4 (OVERALL WIDTH)'
+        THEN ps.param_value_max END) AS Max_Width,
+
+    MAX(CASE WHEN prm.param_desc = 'S1_S2 (OVERALL THICKNESS)'
+        THEN ps.param_value_min END) AS Min_Thickness,
+    MAX(CASE WHEN prm.param_desc = 'S1_S2 (OVERALL THICKNESS)'
+        THEN ps.param_value_max END) AS Max_Thickness,
+
+    MAX(CASE WHEN prm.param_desc = 'DIAMETER'
+        THEN ps.param_value_min END) AS Min_Diameter,
+    MAX(CASE WHEN prm.param_desc = 'DIAMETER'
+        THEN ps.param_value_max END) AS Max_Diameter,
+
+    MAX(CASE WHEN prm.param_desc = 'ABSORPTION COEFFICIENT (1064NM)'
+        THEN ps.param_value_min END) AS Min_Alpha,
+    MAX(CASE WHEN prm.param_desc = 'ABSORPTION COEFFICIENT (1064NM)'
+        THEN ps.param_value_max END) AS Max_Alpha,
+
+    MAX(CASE WHEN prm.param_desc = 'OPTICAL DENSITY'
+        THEN ps.param_value_min END) AS Min_OD,
+    MAX(CASE WHEN prm.param_desc = 'OPTICAL DENSITY'
+        THEN ps.param_value_max END) AS Max_OD,
+
+    MAX(CASE WHEN prm.param_desc = 'TRANSMISSION'
+        THEN ps.param_value_min END) AS Min_Transmission,
+    MAX(CASE WHEN prm.param_desc = 'TRANSMISSION'
+        THEN ps.param_value_max END) AS Max_Transmission
+
+FROM products.dbo.part_master pm
+INNER JOIN products.dbo.part_specs ps
+    ON ps.part_id = pm.part_id
+   AND ps.part_rev = pm.part_rev
+INNER JOIN products.dbo.parameter_master prm
+    ON prm.param_no = ps.param_no
+
+WHERE pm.material_no = 54
+  AND pm.latest_rev = 1
+  AND ps.part_spec_type = 'F'
+  AND prm.param_desc IN (
+        'E1_E2 OVERALL LENGTH',
+        'DIAMETER',
+        'ABSORPTION COEFFICIENT (1064NM)',
+        'OPTICAL DENSITY',
+        'S3_S4 (OVERALL WIDTH)',
+        'S1_S2 (OVERALL THICKNESS)',
+        'TRANSMISSION'
+  )
+
+GROUP BY
+    pm.part_id,
+    pm.part_rev,
+    pm.part_desc
+
+ORDER BY
+    pm.part_id;
