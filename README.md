@@ -824,3 +824,53 @@ SafeExit:
     Application.EnableEvents = True
 
 End Sub
+
+SELECT
+    measurements_log.item_id AS serial_number,
+
+    MAX(CASE 
+        WHEN parameter_master.param_desc = 'E1_E2 OVERALL LENGTH'
+        THEN measurements_log.meas_value
+    END) AS overall_length,
+
+    MAX(CASE 
+        WHEN parameter_master.param_desc = 'DIAMETER'
+        THEN measurements_log.meas_value
+    END) AS diameter,
+
+    MAX(CASE 
+        WHEN parameter_master.param_desc = 'ABSORPTION COEFFICIENT (1064NM)'
+        THEN measurements_log.meas_value
+    END) AS absorption_coefficient_1064nm,
+
+    MAX(CASE 
+        WHEN parameter_master.param_desc = 'OPTICAL DENSITY'
+        THEN measurements_log.meas_value
+    END) AS optical_density,
+
+    MAX(CASE 
+        WHEN parameter_master.param_desc = 'TRANSMISSION'
+        THEN measurements_log.meas_value
+    END) AS transmission
+
+FROM products.dbo.inventory inventory
+
+INNER JOIN products.dbo.measurements_log measurements_log
+    ON measurements_log.tag_id = inventory.tag_id
+
+INNER JOIN products.dbo.parameter_master parameter_master
+    ON parameter_master.param_no = measurements_log.param_no
+
+WHERE inventory.part_id LIKE '%481%'
+
+AND parameter_master.param_desc IN (
+    'E1_E2 OVERALL LENGTH',
+    'DIAMETER',
+    'ABSORPTION COEFFICIENT (1064NM)',
+    'OPTICAL DENSITY',
+    'TRANSMISSION'
+)
+
+GROUP BY measurements_log.item_id
+
+ORDER BY measurements_log.item_id;
