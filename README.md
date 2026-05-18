@@ -1,4 +1,4 @@
-1wI'llOption Explicit
+Option Explicit
 
 Sub BuildOptimizedPuckLayout()
 
@@ -935,6 +935,137 @@ WHERE pm.material_no = 54
         'S1_S2 (OVERALL THICKNESS)',
         'TRANSMISSION'
   )
+
+GROUP BY
+    pm.part_id,
+    pm.part_rev,
+    pm.part_desc
+
+ORDER BY
+    pm.part_id;
+
+SELECT
+    pm.part_id                                        AS Part_Number,
+    pm.part_rev                                       AS Revision,
+    pm.part_desc                                      AS Part_Description,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'E1_E2 OVERALL LENGTH'
+        THEN ps.param_value_nominal
+    END)                                              AS Length_Nominal,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'E1_E2 OVERALL LENGTH'
+        THEN ps.param_value_min
+    END)                                              AS Length_Min,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'E1_E2 OVERALL LENGTH'
+        THEN ps.param_value_max
+    END)                                              AS Length_Max,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'DIAMETER'
+        THEN ps.param_value_nominal
+    END)                                              AS Diameter_Nominal,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'DIAMETER'
+        THEN ps.param_value_min
+    END)                                              AS Diameter_Min,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'DIAMETER'
+        THEN ps.param_value_max
+    END)                                              AS Diameter_Max,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'ABSORPTION COEFFICIENT (1064NM)'
+        THEN ps.param_value_nominal
+    END)                                              AS Alpha_Nominal,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'ABSORPTION COEFFICIENT (1064NM)'
+        THEN ps.param_value_min
+    END)                                              AS Alpha_Min,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'ABSORPTION COEFFICIENT (1064NM)'
+        THEN ps.param_value_max
+    END)                                              AS Alpha_Max,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'OPTICAL DENSITY'
+        THEN ps.param_value_nominal
+    END)                                              AS OD_Nominal,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'OPTICAL DENSITY'
+        THEN ps.param_value_min
+    END)                                              AS OD_Min,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'OPTICAL DENSITY'
+        THEN ps.param_value_max
+    END)                                              AS OD_Max,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'S3_S4 (OVERALL WIDTH)'
+        THEN ps.param_value_nominal
+    END)                                              AS Width_Nominal,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'S3_S4 (OVERALL WIDTH)'
+        THEN ps.param_value_min
+    END)                                              AS Width_Min,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'S3_S4 (OVERALL WIDTH)'
+        THEN ps.param_value_max
+    END)                                              AS Width_Max,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'S1_S2 (OVERALL THICKNESS)'
+        THEN ps.param_value_nominal
+    END)                                              AS Thickness_Nominal,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'S1_S2 (OVERALL THICKNESS)'
+        THEN ps.param_value_min
+    END)                                              AS Thickness_Min,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'S1_S2 (OVERALL THICKNESS)'
+        THEN ps.param_value_max
+    END)                                              AS Thickness_Max,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'TRANSMISSION'
+        THEN ps.param_value_nominal
+    END)                                              AS Transmission_Nominal,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'TRANSMISSION'
+        THEN ps.param_value_min
+    END)                                              AS Transmission_Min,
+
+    MAX(CASE
+        WHEN prm.param_desc = 'TRANSMISSION'
+        THEN ps.param_value_max
+    END)                                              AS Transmission_Max
+
+FROM products.dbo.part_master pm
+
+INNER JOIN products.dbo.part_specs ps
+    ON ps.part_id = pm.part_id
+   AND ps.part_rev = pm.part_rev
+
+INNER JOIN products.dbo.parameter_master prm
+    ON prm.param_no = ps.param_no
+
+WHERE pm.material_no = 54
+  AND pm.latest_rev = 1
+  AND ps.part_spec_type = 'F'
 
 GROUP BY
     pm.part_id,
