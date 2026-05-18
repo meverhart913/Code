@@ -826,7 +826,7 @@ SafeExit:
 End Sub
 
 SELECT
-    measurements_log.item_id AS serial_number,
+    measurements_log.item_id AS serial_number, inventory.part_id AS part_id,
 
     MAX(CASE 
         WHEN parameter_master.param_desc = 'E1_E2 OVERALL LENGTH'
@@ -871,6 +871,6 @@ AND parameter_master.param_desc IN (
     'TRANSMISSION'
 )
 
-GROUP BY measurements_log.item_id
+GROUP BY inventory.part_id, measurements_log.item_id
 
-ORDER BY measurements_log.item_id;
+ORDER BY inventory.part_id, measurements_log.item_id;
